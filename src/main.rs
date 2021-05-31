@@ -6,11 +6,15 @@ use std::{process::exit, time::Duration};
 use winrt_notification::Toast;
 
 const TM_BOLD: &'static str = "1";
+const TM_NEGATIVE: &'static str = "7";
+const TM_POSITIVE: &'static str = "27";
 const TM_DISABLE_BOLD: &'static str = "22";
 const TM_BLACK: &'static str = "30";
 const TM_RED: &'static str = "31";
-const TM_BLUE: &'static str = "34";
+const _TM_BLUE: &'static str = "34";
 const TM_DEFAULT_COLOR: &'static str = "39";
+
+const time_step: f32 = 1. / 60.;
 
 fn main() {
     let args:Vec<String> = std::env::args().collect();
@@ -48,14 +52,16 @@ fn main() {
     
     let mut remaining_duration = duration;
     
+    clear_console();
+    hide_cursor();
     print_remaining(remaining_duration, duration);
-    while remaining_duration > 1. {
-        std::thread::sleep(Duration::from_secs(60));
-        remaining_duration -= 1.;
+    while remaining_duration >= time_step {
+        std::thread::sleep(Duration::from_secs(1));
+        remaining_duration -= time_step;
         print_remaining(remaining_duration, duration);
     }
 
-    std::thread::sleep(Duration::from_secs_f32(remaining_duration * 60.));
+    std::thread::sleep(Duration::from_secs_f32(remaining_duration));
     
     let alert_msg = format!("{} minutes over!", duration);
     let repeat_msg = reminder_duration.map(|rd| format!("Repeats in {} minutes.", rd));
@@ -98,33 +104,89 @@ fn show_toast(title: &str, text: &Option<String>, print_title: bool) {
 }
 
 fn print_remaining(remaining_duration: f32, total_duration: f32) {
-    clear_console();
     set_cursor_position(1, 1);
-    let console_width = win32console::console::WinConsole::output().get_screen_buffer_info().unwrap().screen_buffer_size.x;
-    print_loading_bar(remaining_duration, total_duration, console_width as u32);
+    let console_width = win32console::console::WinConsole::output().get_screen_buffer_info().unwrap().screen_buffer_size.x as u32;
     text_mode(TM_BOLD);
-    text_mode(TM_BLUE);
-    print!("{}", remaining_duration);
-    text_mode(TM_DEFAULT_COLOR);
+
+    let fill_width =  (console_width as f32      * (remaining_duration as f32 / total_duration as f32)      ) as u32;
+    let sub_width =  ((console_width as f32 * 8. * (remaining_duration as f32 / total_duration as f32)) % 8.) as u32;
+
+    let text = if remaining_duration <= 1. {
+        format!("{} seconds remaining", (remaining_duration * 60.) as u32)
+    } else {
+        format!("{} minutes remaining", (remaining_duration + 0.5) as u32)
+    };
+
+    let side_space_left = u32::max((console_width - text.len() as u32) / 2, 0);
+    let side_space_right = if ((console_width as f32 - text.len() as f32) / 2.) % 1. >= 0.5 { side_space_left + 1 } else { side_space_left };
+    // Top Row
+    for _ in 0..console_width {
+        print!("▁");
+    }
+    println!();
+
+    // Content Row
+    text_mode(TM_NEGATIVE);
+
+    // Spaces left of text
+    for i in 0..side_space_left {
+        if i == fill_width {
+            text_mode(TM_POSITIVE);
+            print_sub_char(sub_width);
+        } else {
+            print!(" ");
+        }
+    }
+
+    // Text
+    let mut ci = side_space_left;
+    for c in text.chars() {
+        if ci == fill_width { text_mode(TM_POSITIVE); }
+        print!("{}", c);
+        ci += 1;
+    }
+
+    // Spaces right of text
+    for i in 0..side_space_right-1 {
+        if side_space_left + text.len() as u32 + i == fill_width {
+            text_mode(TM_POSITIVE);
+            print_sub_char(sub_width);
+        } else {
+            print!(" ");
+        }
+    }
+
+    // End
+    text_mode(TM_POSITIVE);
+    if fill_width == console_width {
+        print!("█");
+    } else {
+        print!("▕");
+    }
+    println!();
+
+    // Bot Row
+    for _ in 0..console_width {
+        print!("▔");
+    }
+    println!();
+    clear_line();
+
     text_mode(TM_DISABLE_BOLD);
-    println!(" minutes remaining");
 }
 
-fn print_loading_bar(progress: f32, total: f32, width: u32) {
-    text_mode(TM_BOLD);
-    text_mode(TM_BLACK);
-    print!("[");
-    let inner_bar_width = width - 2;
-    let filled_steps = ((progress / total) * inner_bar_width as f32) as u32;
-    for _ in 0..filled_steps {
-        print!("=");
-    }
-    for _ in 0..(inner_bar_width - filled_steps) {
-        print!(" ");
-    }
-    println!("]");
-    text_mode(TM_DEFAULT_COLOR);
-    text_mode(TM_DISABLE_BOLD);
+fn print_sub_char(sub_width: u32) {
+    let sub_char = match sub_width {
+        1 => "▏",
+        2 => "▎",
+        3 => "▍",
+        4 => "▌",
+        5 => "▋",
+        6 => "▊",
+        7 => "▉",
+        _ => " ",
+    };
+    print!("{}", &sub_char);
 }
 
 fn set_cursor_position(x: u32, y: u32) {
@@ -137,6 +199,14 @@ fn text_mode(mode: &str) {
 
 fn clear_console() {
     print!("\u{001b}c");
+}
+
+fn clear_line() {
+    print!("\x1B[J");
+}
+
+fn hide_cursor() {
+    print!("\x1B[?25l");
 }
 
 fn print_usage_and_quit() {
