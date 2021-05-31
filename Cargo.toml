@@ -1,0 +1,11 @@
+[package]
+name = "asuro-timer"
+version = "0.1.0"
+authors = ["Asuro <asuro@posteo.de>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+win32console = "0.1.4"
+winrt-notification = "0.3.0"
