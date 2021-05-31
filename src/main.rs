@@ -14,7 +14,7 @@ const TM_RED: &'static str = "31";
 const _TM_BLUE: &'static str = "34";
 const TM_DEFAULT_COLOR: &'static str = "39";
 
-const time_step: f32 = 1. / 60.;
+const TIME_STEP: f32 = 1. / 60.;
 
 fn main() {
     let args:Vec<String> = std::env::args().collect();
@@ -55,9 +55,9 @@ fn main() {
     clear_console();
     hide_cursor();
     print_remaining(remaining_duration, duration);
-    while remaining_duration >= time_step {
+    while remaining_duration >= TIME_STEP {
         std::thread::sleep(Duration::from_secs(1));
-        remaining_duration -= time_step;
+        remaining_duration -= TIME_STEP;
         print_remaining(remaining_duration, duration);
     }
 
