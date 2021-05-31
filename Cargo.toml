@@ -1,6 +1,6 @@
 [package]
 name = "asuro-timer"
-version = "0.2.0"
+version = "0.2.1"
 description = "A simple timer using windows notifications."
 authors = ["Asuro <asuro@posteo.de>"]
 repository = "https://github.com/TheAsuro/asuro-timer"
