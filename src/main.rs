@@ -96,16 +96,19 @@ fn show_toast(title: &str, text: &Option<String>, print_title: bool) {
         text_mode(TM_DISABLE_BOLD);
     }
 
-    temp_toast
+    let toast_result = temp_toast
         .duration(winrt_notification::Duration::Short)
         .sound(Some(winrt_notification::Sound::SMS))
-        .show()
-        .unwrap();
+        .show();
+
+    if let Err(e) = toast_result {
+        eprintln!("Failed to show toast! {:?}", e);
+    }
 }
 
 fn print_remaining(remaining_duration: f32, total_duration: f32) {
     set_cursor_position(1, 1);
-    let console_width = win32console::console::WinConsole::output().get_screen_buffer_info().unwrap().screen_buffer_size.x as u32;
+    let console_width = win32console::console::WinConsole::output().get_screen_buffer_info().map(|sb| sb.screen_buffer_size.x as u32).unwrap_or(20);
     text_mode(TM_BOLD);
 
     let fill_width =  (console_width as f32      * (remaining_duration as f32 / total_duration as f32)      ) as u32;
